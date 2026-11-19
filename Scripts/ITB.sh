@@ -39,7 +39,7 @@ if [ ! -f "$DTS" ]; then
 #include "an758x-nokia_xg-040g-ubi-parts.dtsi"
 
 / {
-	model = "Nokia Bell XG-140G-TF";
+	model = "XG-140G-TF";
 	compatible = "nokia,xg-140g-tf-ubi", "airoha,an7581",
 		     "airoha,en7581";
 };
@@ -132,6 +132,27 @@ WRT_BPFFS
 	chmod +x "$UDEF_DIR/99-bpffs"
 	echo "ITB: honk + v2ray-geodata + 内核 BTF + bpffs 已就绪"
 fi
+
+# ------------------------------------------------- 4.7 root 免密登录
+# LuCI：首次启动把 root 密码清空，登录页直接点「登录」即可
+# SSH ：dropbear 默认拒绝空密码，必须在启动参数里加 -B
+UDEF_DIR="package/base-files/files/etc/uci-defaults"
+mkdir -p "$UDEF_DIR"
+cat > "$UDEF_DIR/99-root-nopass" <<'WRT_NOPASS'
+#!/bin/sh
+# root 空密码：LuCI 直接登录，SSH 由 dropbear -B 放行
+passwd -d root 2>/dev/null
+sed -i 's/^root:[^:]*:/root::/' /etc/shadow
+exit 0
+WRT_NOPASS
+chmod +x "$UDEF_DIR/99-root-nopass"
+
+DB_INIT="package/network/services/dropbear/files/dropbear.init"
+if [ -f "$DB_INIT" ] && ! grep -q 'pid_file" -B' "$DB_INIT"; then
+	sed -i 's|procd_set_param command "\$PROG" -F -P "\$pid_file"|procd_set_param command "\$PROG" -F -P "\$pid_file" -B|' "$DB_INIT"
+	echo "ITB: dropbear 已加 -B（允许空密码）"
+fi
+echo "ITB: root 免密登录已就绪"
 
 # ---------------------------------------------------------- 5. 勾选设备符号
 # 必须在 make defconfig 之前写入 .config

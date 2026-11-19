@@ -169,7 +169,12 @@ jobs:
           if [[ "${WRT_CONFIG,,}" == *"test"* ]]; then
             cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt >> .config
           else
-            cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt $GITHUB_WORKSPACE/Config/GENERAL.txt >> .config
+            # 允许按配置名提供专属的 GENERAL，例如 Config/GENERAL-AIROHA-WIFI-NO-ITB.txt；
+            # 没有专属文件时仍用公共的 Config/GENERAL.txt。
+            GENERAL_FILE="$GITHUB_WORKSPACE/Config/GENERAL-$WRT_CONFIG.txt"
+            [ -f "$GENERAL_FILE" ] || GENERAL_FILE="$GITHUB_WORKSPACE/Config/GENERAL.txt"
+            echo "Using general config: $(basename "$GENERAL_FILE")"
+            cat $GITHUB_WORKSPACE/Config/$WRT_CONFIG.txt "$GENERAL_FILE" >> .config
           fi
 
           $GITHUB_WORKSPACE/Scripts/Settings.sh

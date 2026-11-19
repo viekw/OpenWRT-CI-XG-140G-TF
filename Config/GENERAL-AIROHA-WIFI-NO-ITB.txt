@@ -1,0 +1,47 @@
+# ITB(UBI) 精简线专用 GENERAL
+#
+# 只保留：honk(eBPF 透明代理) + 精简版 Tailscale + 网络高级唤醒 + PON 页面
+# PON/光信号相关由两处保证，都不在这里写、也不能删：
+#   1) 机型 DEVICE_PACKAGES：kmod-airoha-xpon / kmod-airoha-en7572 /
+#      kmod-phy-airoha-en8811h / airoha-ponctl / airoha-pond / leds / button
+#   2) luci-app-pon（来自源码自带的 pon_userspace feed）把它拉成界面
+#
+# 编译参数
+CONFIG_CCACHE=y
+CONFIG_DEVEL=y
+CONFIG_FEED_video=n
+CONFIG_TARGET_MULTI_PROFILE=y
+CONFIG_TARGET_PER_DEVICE_ROOTFS=y
+CONFIG_TARGET_ROOTFS_INITRAMFS=n
+#
+# 内核：honk 的 eBPF CO-RE 需要 BTF，三行缺一不可
+# KERNEL_DEBUG_INFO_REDUCED 默认是 y，会把 BTF 关掉，必须显式置 n
+CONFIG_KERNEL_DEBUG_INFO=y
+CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
+CONFIG_KERNEL_DEBUG_INFO_BTF=y
+#
+# 删除项
+CONFIG_PACKAGE_luci-app-attendedsysupgrade=n
+CONFIG_PACKAGE_vlmcsd=n
+#
+# 代理：honk（eBPF 透明代理，dae 系 Rust 重写；核心是预编译归档，不需 Rust 工具链）
+CONFIG_PACKAGE_honk=y
+CONFIG_PACKAGE_luci-app-honk=y
+CONFIG_PACKAGE_v2ray-geoip=y
+CONFIG_PACKAGE_v2ray-geosite=y
+#
+# Tailscale（服务端来自 GuNanOvO/openwrt-tailscale，由 Scripts/ITB.sh 覆盖 feeds）
+CONFIG_PACKAGE_tailscale=y
+CONFIG_PACKAGE_luci-app-tailscale=y
+#
+# 网络高级唤醒（WOL Ultra，依赖 etherwake）
+CONFIG_PACKAGE_luci-app-wolultra=y
+CONFIG_PACKAGE_etherwake=y
+#
+# PON 界面：光衰/光功率、线路状态、板级身份（LOID/序列号/MAC）编辑
+# 依赖会自动带上 airoha-ponctl、airoha-pond、mtd、ubi-utils、nand-utils
+CONFIG_PACKAGE_luci-app-pon=y
+#
+# WAN PPPoE 拨号保险（pon0 上跑 PPPoE 时必须有）
+CONFIG_PACKAGE_ppp=y
+CONFIG_PACKAGE_ppp-mod-pppoe=y

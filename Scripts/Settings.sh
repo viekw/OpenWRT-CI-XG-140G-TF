@@ -74,3 +74,8 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 		echo "qualcommax set up nowifi successfully!"
 	fi
 fi
+
+#ITB(UBI) 编译线补丁，由 ITB.sh 内部判断配置名是否含 ITB
+if [ -f "$GITHUB_WORKSPACE/Scripts/ITB.sh" ]; then
+	source "$GITHUB_WORKSPACE/Scripts/ITB.sh"
+fi

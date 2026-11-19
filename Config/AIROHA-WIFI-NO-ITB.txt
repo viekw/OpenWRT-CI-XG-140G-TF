@@ -1,0 +1,28 @@
+#
+# ITB(UBI) 编译线专用配置 —— 只出 Nokia XG-140G-TF (UBI) 的 sysupgrade.itb
+#
+# 设备条目 nokia_xg-140g-tf-ubi 由 Scripts/ITB.sh 在 make defconfig 前注入源码
+# 并写入 .config，所以这里不写 CONFIG_TARGET_DEVICE_*。
+# 插件清单见 Config/GENERAL-AIROHA-WIFI-NO-ITB.txt（专属 GENERAL）。
+#
+# 平台
+CONFIG_TARGET_airoha=y
+CONFIG_TARGET_airoha_an7581=y
+CONFIG_KERNEL_DEVMEM=y
+CONFIG_BUSYBOX_CUSTOM=y
+CONFIG_BUSYBOX_CONFIG_DEVMEM=y
+CONFIG_PACKAGE_kmod-dummy=y
+#
+# AN7581 NPU 硬件加速固件（NAT 加速必需，别删）
+CONFIG_DEFAULT_airoha-en7581-npu-firmware=y
+CONFIG_PACKAGE_airoha-en7581-npu-firmware=y
+#
+# WIFI 驱动全部关闭（本机无 WIFI）
+CONFIG_PACKAGE_kmod-ath=n
+CONFIG_PACKAGE_kmod-ath11k=n
+CONFIG_PACKAGE_kmod-ath11k-ahb=n
+CONFIG_PACKAGE_kmod-ath11k-pci=n
+CONFIG_PACKAGE_ath11k-firmware-ipq6018=n
+CONFIG_PACKAGE_ath11k-firmware-ipq6018-ddwrt=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074=n
+CONFIG_PACKAGE_ath11k-firmware-qcn9074-ddwrt=n

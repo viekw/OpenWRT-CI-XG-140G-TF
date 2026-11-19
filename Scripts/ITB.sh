@@ -91,6 +91,16 @@ if [ -d feeds/packages ]; then
 	if git clone --depth=1 --single-branch "https://github.com/GuNanOvO/openwrt-tailscale.git" ./gn-ts >/dev/null 2>&1; then
 		cp -r ./gn-ts/package/tailscale ./package/tailscale
 		rm -rf ./gn-ts
+		# luci-app-tailscale（asvow）自带 /etc/config/tailscale 与 /etc/init.d/tailscale，
+		# 与 GuNanOvO 包写同一路径，package/install 阶段会报
+		#   ERROR: luci-app-tailscale: trying to overwrite etc/config/tailscale owned by tailscale
+		# 这里让 LuCI 应用独占这两个文件，GuNanOvO 包只提供 tailscaled 二进制。
+		TS_MK="package/tailscale/Makefile"
+		if [ -f "$TS_MK" ]; then
+			sed -i '\#files/tailscale\.init#d; \#files/tailscale\.conf#d' "$TS_MK"
+			sed -i '\#^/etc/config/tailscale$#d' "$TS_MK"
+			echo "ITB: 已移除 GuNanOvO 包的 init/config 安装行（改由 luci-app-tailscale 提供）"
+		fi
 		echo "ITB: tailscale 已替换为 GuNanOvO 精简版"
 	else
 		echo "ITB: 克隆 GuNanOvO/openwrt-tailscale 失败，回退官方 tailscale"
@@ -114,6 +124,36 @@ if [ "$ITB_HONK" = "1" ]; then
 	# 只要 GeoIP/GeoSite 数据包，避免 whole small feed 带来同名包冲突
 	./scripts/feeds install -p small v2ray-geoip v2ray-geosite >/dev/null 2>&1 \
 		|| ./scripts/feeds install -a -p small >/dev/null 2>&1
+
+	# ------------------------------------------------------------
+	# 预下载 honk / doona 资产：openwrt 的下载没有超时，GitHub release
+	# 握手一卡就无限等（表现为某行停半小时以上、没有 Error）。这里用带
+	# 超时的 curl 提前放进 dl/，compile 阶段就完全不联网。
+	DL_DIR="./dl"
+	mkdir -p "$DL_DIR"
+	HONK_MK="feeds/honk/honk/Makefile"
+	DOONA_MK="feeds/honk/luci-app-honk/Makefile"
+	if [ -f "$HONK_MK" ] && [ -f "$DOONA_MK" ]; then
+		HONK_TAG=$(sed -n 's/^HONK_SOURCE_TAG?=//p' "$HONK_MK" | head -1)
+		CORE_COMMIT=$(sed -n 's/^CORE_COMMIT:=//p' "$HONK_MK" | head -1)
+		HONK_ASSET="honk-core-${CORE_COMMIT}-aarch64.tar.gz"
+		DOONA_ASSET=$(sed -n 's/^PKG_SOURCE:=//p' "$DOONA_MK" | head -1)
+		HONK_BASE="https://github.com/kenzok8/openwrt-honk/releases/download/${HONK_TAG}"
+		for ITEM in "${HONK_ASSET}|${HONK_BASE}/${HONK_ASSET}" "${DOONA_ASSET}|${HONK_BASE}/${DOONA_ASSET}"; do
+			NAME="${ITEM%%|*}"
+			URL="${ITEM#*|}"
+			[ -n "$NAME" ] || continue
+			[ -s "$DL_DIR/$NAME" ] && continue
+			if curl -fL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 600 \
+				-o "$DL_DIR/$NAME.part" "$URL"; then
+				mv -f "$DL_DIR/$NAME.part" "$DL_DIR/$NAME"
+				echo "ITB: 预下载完成 $NAME"
+			else
+				rm -f "$DL_DIR/$NAME.part"
+				echo "ITB: 预下载失败 $NAME（交给 make 自己下）"
+			fi
+		done
+	fi
 
 	# 内核 BTF：honk 启动检查硬性要求 /sys/kernel/btf/vmlinux
 	echo "CONFIG_KERNEL_DEBUG_INFO=y" >> .config
